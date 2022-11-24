@@ -2,13 +2,16 @@
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@apollo/server/express4";
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
-import express from "express";
 import { makeExecutableSchema } from "@graphql-tools/schema";
+import cors from "cors";
+import * as dotenv from "dotenv";
+import express, { json } from "express";
 import http from "http";
-import typeDefs from "./graphql/typeDefs";
 import resolvers from "./graphql/resolvers";
+import typeDefs from "./graphql/typeDefs";
 
 async function main() {
+  dotenv.config();
   const app = express();
   const httpServer = http.createServer(app);
 
@@ -17,12 +20,17 @@ async function main() {
     resolvers,
   });
 
+  const corsOptions = {
+    origin: process.env.CLIENT_ORIGIN,
+    credentials: true,
+  };
+
   const server = new ApolloServer({
     schema,
     plugins: [ApolloServerPluginDrainHttpServer({ httpServer })],
   });
   await server.start();
-  app.use("/graphql", expressMiddleware(server));
+  app.use("/graphql", cors(corsOptions), json(), expressMiddleware(server));
   await new Promise<void>((resolve) =>
     httpServer.listen({ port: 4000 }, resolve)
   );
